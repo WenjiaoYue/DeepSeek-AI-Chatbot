@@ -45,7 +45,7 @@
   }
 </script>
 
-<div class="input-section bg-white border-t border-gray-200 p-4">
+<div class="input-section bg-white p-6">
   <div class="flex items-end space-x-3">
     <div class="flex-1 relative">
       <textarea
@@ -56,10 +56,10 @@
         placeholder="输入您的问题..."
         rows="1"
         maxlength="256"
-        class="w-full resize-none border border-gray-300 bg-gray-50 px-4 py-3 pr-12 text-gray-900 placeholder-gray-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all duration-200 rounded-lg"
+        class="w-full resize-none border border-gray-200 bg-gray-50 px-4 py-4 pr-12 text-gray-900 placeholder-gray-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all duration-200 rounded-xl shadow-sm focus:shadow-md"
         {disabled}
       />
-      <div class="absolute right-3 bottom-3 text-xs text-gray-400">
+      <div class="absolute right-4 bottom-4 text-xs text-gray-400 font-medium">
         {message.length}/256
       </div>
     </div>
@@ -68,9 +68,9 @@
       type="button"
       on:click={sendMessage}
       disabled={disabled || !message.trim()}
-      class="flex h-10 w-10 items-center justify-center bg-blue-500 text-white transition-all duration-200 hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:bg-gray-400 disabled:cursor-not-allowed rounded-lg"
+      class="flex h-12 w-12 items-center justify-center bg-gradient-to-r from-blue-500 to-blue-600 text-white transition-all duration-200 hover:from-blue-600 hover:to-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:from-gray-400 disabled:to-gray-400 disabled:cursor-not-allowed rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95"
     >
-      <Send size={18} />
+      <Send size={20} />
     </button>
   </div>
 </div>

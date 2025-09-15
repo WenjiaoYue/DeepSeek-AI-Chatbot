@@ -12,14 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { svelte } from "@sveltejs/vite-plugin-svelte";
 import type { UserConfig } from "vite";
+import { sveltekit } from '@sveltejs/kit/vite';
 
 const config: UserConfig = {
-	plugins: [svelte()],
+	plugins: [sveltekit()],
+	optimizeDeps: {
+		exclude: ['@sveltejs/kit']
+	},
 	server: {
 		allowedHosts: true
-	},
+	}
 };
 
 export default config;

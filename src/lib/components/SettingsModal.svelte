@@ -207,15 +207,15 @@
   }
   
   .modal-header {
-    @apply flex items-center justify-between p-6 border-b border-gray-200;
+    @apply flex items-center justify-between p-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-blue-100;
   }
   
   .modal-title {
-    @apply text-xl font-semibold text-gray-900;
+    @apply text-xl font-semibold text-blue-900;
   }
   
   .close-btn {
-    @apply p-2 text-gray-400 hover:text-gray-600 transition-colors;
+    @apply p-2 text-blue-400 hover:text-blue-600 transition-colors;
   }
   
   .modal-body {

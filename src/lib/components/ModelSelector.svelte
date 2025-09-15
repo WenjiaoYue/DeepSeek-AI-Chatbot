@@ -70,11 +70,11 @@
   }
   
   .selector-button {
-    @apply flex items-center w-full px-4 py-3 bg-gradient-to-r from-white to-gray-50 border border-gray-300 text-left hover:from-blue-50 hover:to-blue-100 hover:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 shadow-sm hover:shadow-md;
+    @apply flex items-center w-full px-4 py-3 bg-white/95 backdrop-blur-sm border border-white/40 text-left hover:bg-white hover:border-white/60 focus:outline-none focus:ring-2 focus:ring-white/50 transition-all duration-200 shadow-sm hover:shadow-md rounded-lg;
   }
   
   .selector-icon {
-    @apply flex-shrink-0 text-blue-600 mr-3;
+    @apply flex-shrink-0 text-gray-700 mr-3;
   }
   
   .selector-content {
@@ -98,27 +98,27 @@
   }
   
   .config-name {
-    @apply text-sm font-semibold text-gray-900 truncate;
+    @apply text-sm font-semibold text-gray-800 truncate;
   }
   
   .model-name {
-    @apply text-xs text-blue-600 truncate font-medium;
+    @apply text-xs text-gray-600 truncate font-medium;
   }
   
   .chevron {
-    @apply text-gray-500 group-hover:text-blue-600;
+    @apply text-gray-600 group-hover:text-gray-800;
   }
   
   .dropdown {
-    @apply absolute top-full left-0 right-0 mt-2 bg-white border border-gray-300 shadow-xl z-50 max-h-64 overflow-y-auto backdrop-blur-sm rounded-lg;
+    @apply absolute top-full left-0 right-0 mt-2 bg-white border border-gray-300 shadow-2xl z-50 max-h-64 overflow-y-auto backdrop-blur-sm rounded-xl;
   }
   
   .dropdown-item {
-    @apply w-full px-4 py-3 text-left text-sm text-gray-700 hover:bg-gradient-to-r hover:from-blue-50 hover:to-blue-100 focus:outline-none focus:bg-blue-50 transition-all duration-150 flex items-center justify-between;
+    @apply w-full px-4 py-3 text-left text-sm text-gray-800 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 transition-all duration-150 flex items-center justify-between;
   }
   
   .dropdown-item.active {
-    @apply bg-gradient-to-r from-blue-100 to-blue-50 text-blue-800 font-medium;
+    @apply bg-gray-200 text-gray-900 font-medium;
   }
   
   .model-info {
@@ -126,7 +126,7 @@
   }
   
   .model-icon {
-    @apply text-blue-500 flex-shrink-0;
+    @apply text-gray-600 flex-shrink-0;
   }
   
   .model-text {
@@ -134,6 +134,6 @@
   }
   
   .check-mark {
-    @apply text-blue-600 font-bold flex-shrink-0;
+    @apply text-green-600 font-bold flex-shrink-0;
   }
 </style>

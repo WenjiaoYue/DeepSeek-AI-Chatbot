@@ -5,38 +5,39 @@
 @layer base {
   html {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    @apply h-full overflow-hidden;
   }
   
   body {
-    @apply bg-gray-100 text-gray-900;
+    @apply bg-gray-100 text-gray-900 h-full overflow-hidden;
   }
 }
 
 @layer components {
   .topic-btn {
-    @apply px-6 py-3 font-medium text-sm transition-all duration-200 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2;
-    border-radius: 8px;
+    @apply px-4 py-2 md:px-8 md:py-4 font-semibold text-xs md:text-sm transition-all duration-300 hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-offset-2 transform hover:scale-105 active:scale-95;
+    border-radius: 12px;
   }
   
   .topic-btn-primary {
-    @apply bg-blue-600 hover:bg-blue-700 text-white focus:ring-blue-500;
+    @apply bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white focus:ring-blue-500 shadow-lg;
   }
   
   .topic-btn-fun {
-    @apply bg-green-600 hover:bg-green-700 text-white focus:ring-green-500;
+    @apply bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white focus:ring-green-500 shadow-lg;
   }
   
   .message-bubble {
-    @apply max-w-[85%] p-4 shadow-lg animate-fade-in;
+    @apply max-w-[85%] p-5 shadow-xl animate-fade-in;
     border-radius: 16px;
   }
   
   .message-user {
-    @apply bg-gradient-to-br from-blue-500 to-blue-600 text-white ml-auto;
+    @apply bg-gradient-to-br from-blue-500 to-blue-600 text-white ml-auto shadow-lg;
   }
   
   .message-assistant {
-    @apply bg-white text-gray-900 mr-auto border border-gray-200;
+    @apply bg-white text-gray-900 mr-auto border border-gray-100 shadow-lg;
   }
 }
 
@@ -115,21 +116,21 @@
 /* Custom scrollbar */
 .custom-scrollbar {
   scrollbar-width: thin;
-  scrollbar-color: rgb(156 163 175) rgb(249 250 251);
+  scrollbar-color: rgb(59 130 246) rgb(249 250 251);
 }
 
 .custom-scrollbar::-webkit-scrollbar {
-  width: 6px;
+  width: 8px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {
-  @apply bg-gray-100;
+  @apply bg-gray-50 rounded-full;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  @apply bg-gray-400;
+  @apply bg-blue-400 rounded-full;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  @apply bg-gray-500;
+  @apply bg-blue-500;
 }

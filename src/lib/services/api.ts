@@ -41,9 +41,6 @@ export class APIService {
       signal
     });
 
-    console.log('response', response);
-    
-
     if (!response.ok) {
       throw new Error(`API请求失败: ${response.status}`);
     }

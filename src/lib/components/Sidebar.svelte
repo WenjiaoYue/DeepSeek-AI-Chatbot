@@ -50,7 +50,7 @@
 </script>
 
 <div class="sidebar {isOpen ? 'sidebar-open' : 'sidebar-closed'}">
-  <div class="sidebar-header">
+  <div class="sidebar-header bg-gradient-to-r from-gray-800 to-gray-900 text-white">
     <button
       class="new-chat-btn"
       on:click={handleNewChat}
@@ -67,7 +67,7 @@
     </button>
   </div>
   
-  <div class="sidebar-content">
+  <div class="sidebar-content bg-white">
     <div class="section-title">历史对话</div>
     
     <div class="chat-list">
@@ -104,7 +104,7 @@
 
 <style>
   .sidebar {
-    @apply fixed left-0 top-0 h-full bg-gray-50 border-r border-gray-200 transition-all duration-300 z-40;
+    @apply fixed left-0 top-0 h-full bg-white border-r border-gray-200 transition-all duration-300 z-40 shadow-2xl;
     width: 280px;
   }
   
@@ -117,23 +117,24 @@
   }
   
   .sidebar-header {
-    @apply flex items-center justify-between p-4 border-b border-gray-200;
+    @apply flex items-center justify-between p-4 border-b border-gray-300/30;
+    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 50%, #cbd5e1 100%);
   }
   
   .new-chat-btn {
-    @apply flex items-center space-x-2 px-3 py-2 bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors;
+    @apply flex items-center space-x-2 px-4 py-2 bg-white/80 text-gray-700 text-sm font-medium hover:bg-white hover:shadow-sm transition-all duration-200 rounded-lg backdrop-blur-sm;
   }
   
   .settings-btn {
-    @apply p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 transition-colors;
+    @apply p-2 text-gray-600 hover:text-gray-800 hover:bg-white/60 transition-all duration-200 rounded-lg;
   }
   
   .sidebar-content {
-    @apply flex-1 overflow-y-auto p-4;
+    @apply flex-1 overflow-y-auto p-4 bg-gradient-to-b from-white to-gray-50;
   }
   
   .section-title {
-    @apply text-sm font-semibold text-gray-700 mb-3;
+    @apply text-sm font-bold text-gray-800 mb-4 uppercase tracking-wide;
   }
   
   .chat-list {
@@ -141,27 +142,27 @@
   }
   
   .chat-item {
-    @apply flex items-center justify-between p-3 hover:bg-gray-100 cursor-pointer transition-colors;
+    @apply flex items-center justify-between p-3 hover:bg-blue-50 cursor-pointer transition-all duration-200 rounded-lg border border-transparent hover:border-blue-200 hover:shadow-sm;
   }
   
   .chat-item.active {
-    @apply bg-blue-50 border-l-4 border-blue-600;
+    @apply bg-gradient-to-r from-blue-50 to-blue-100 border border-blue-200 shadow-sm;
   }
   
   .chat-item-content {
-    @apply flex items-center space-x-3 flex-1 min-w-0;
+    @apply flex items-center space-x-3 flex-1 min-w-0 overflow-hidden;
   }
   
   .chat-item-text {
-    @apply flex-1 min-w-0;
+    @apply flex-1 min-w-0 overflow-hidden;
   }
   
   .chat-title {
-    @apply text-sm font-medium text-gray-900 truncate;
+    @apply text-sm font-medium text-gray-900 truncate leading-tight;
   }
   
   .chat-date {
-    @apply text-xs text-gray-500;
+    @apply text-xs text-gray-500 truncate;
   }
   
   .delete-btn {
