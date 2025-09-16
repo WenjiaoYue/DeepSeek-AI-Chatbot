@@ -46,23 +46,6 @@
       </div>
     </div>
     
-    <!-- <div class="topic-section">
-      <h3 class="text-base md:text-2xl font-bold text-gray-800 mb-3 md:mb-6 relative">
-        {TOPIC_CATEGORIES.entertainment.title}
-        <div class="w-8 md:w-16 h-0.5 md:h-1 bg-gradient-to-r from-green-500 to-green-600 mx-auto mt-1 md:mt-3 rounded-full"></div>
-      </h3>
-      <div class="flex flex-wrap justify-center gap-2 md:gap-4">
-        {#each TOPIC_CATEGORIES.entertainment.topics as topic}
-          <button
-            class="topic-btn topic-btn-fun text-xs md:text-sm"
-            on:click={() => handleTopicSelect(topic)}
-          >
-            {topic}
-          </button>
-        {/each}
-      </div>
-    </div> -->
-    
   </div>
 </div>
 

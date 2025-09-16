@@ -3,11 +3,7 @@
   import { chatStore } from "$lib/stores/chat";
   import { chatHistoryStore } from "$lib/stores/chat-history";
   import { apiConfigStore } from "$lib/stores/api-config";
-  import {
-    suggestions,
-    setSuggestions,
-    clearSuggestions,
-  } from "$lib/stores/suggestions";
+  import { suggestions, setSuggestions, clearSuggestions } from "$lib/stores/suggestions";
   import { APIService } from "$lib/services/api";
   import { TOPIC_FIRST_MESSAGES } from "$lib/config";
   import { limitText } from "$lib/utils/markdown";
@@ -23,57 +19,39 @@
   import ModelSelector from "$lib/components/ModelSelector.svelte";
 
   let messagesContainer: HTMLElement;
-  let showWelcome = true;
-  let sidebarOpen = false;
+  let sidebarOpen = true; // 默认打开
   let settingsOpen = false;
   let isAtBottom = true;
-  let isSending = false; // 防止重复发送
+  let isSending = false;
 
-  // 响应式状态
   $: hasMessages = $chatStore.messages.length > 0;
   $: showWelcome = !hasMessages;
 
-  // —— 新增：确保有一个有效的当前会话
   function ensureCurrentSession() {
-    if (
-      !$chatHistoryStore.currentSessionId ||
-      !$chatHistoryStore.sessions.find(
-        (s) => s.id === $chatHistoryStore.currentSessionId,
-      )
-    ) {
-      chatHistoryStore.createSession();
+    const valid =
+      $chatHistoryStore.currentSessionId &&
+      $chatHistoryStore.sessions.find((s) => s.id === $chatHistoryStore.currentSessionId);
+    if (!valid) chatHistoryStore.createSession();
+  }
+
+  function saveSession() {
+    if ($chatHistoryStore.currentSessionId) {
+      chatHistoryStore.updateSession($chatHistoryStore.currentSessionId, $chatStore.messages);
     }
   }
 
   onMount(() => {
-    // 加载存储的数据
     chatHistoryStore.loadFromStorage();
     apiConfigStore.loadFromStorage();
-
-    // —— 改动：没有有效会话则新建；有则加载
-    if (
-      !$chatHistoryStore.currentSessionId ||
-      !$chatHistoryStore.sessions.find(
-        (s) => s.id === $chatHistoryStore.currentSessionId,
-      )
-    ) {
-      chatHistoryStore.createSession();
-    } else {
-      const currentSession = $chatHistoryStore.sessions.find(
-        (s) => s.id === $chatHistoryStore.currentSessionId,
-      );
-      if (currentSession) {
-        chatStore.loadSession(currentSession.messages);
-        showWelcome = currentSession.messages.length === 0;
-      }
-    }
+    ensureCurrentSession();
+    const current = $chatHistoryStore.sessions.find((s) => s.id === $chatHistoryStore.currentSessionId);
+    if (current) chatStore.loadSession(current.messages);
   });
 
   afterUpdate(() => {
-    // 只有在底部时才自动滚动
     if (messagesContainer && isAtBottom) {
       requestAnimationFrame(() => {
-        if (messagesContainer && messagesContainer.scrollHeight) {
+        if (messagesContainer?.scrollHeight != null) {
           messagesContainer.scrollTop = messagesContainer.scrollHeight;
         }
       });
@@ -82,141 +60,52 @@
 
   function handleScroll() {
     if (!messagesContainer) return;
-
     const { scrollTop, scrollHeight, clientHeight } = messagesContainer;
-    const threshold = 50; // 50px threshold
-    const newIsAtBottom = scrollTop + clientHeight >= scrollHeight - threshold;
-
-    isAtBottom = newIsAtBottom;
+    isAtBottom = scrollTop + clientHeight >= scrollHeight - 50;
   }
 
   async function handleTopicSelect(event: CustomEvent<string>) {
     if (isSending) return;
+    const msg = TOPIC_FIRST_MESSAGES[event.detail];
+    if (!msg) return;
+    await sendText(limitText(msg));
+  }
 
-    const topic = event.detail;
-    const firstMessage = TOPIC_FIRST_MESSAGES[topic];
-    if (!firstMessage) return;
+  async function handleCustomTopic() { clearSuggestions(); }
+  async function handleSendMessage(event: CustomEvent<string>) { if (!isSending) await sendText(limitText(event.detail)); }
+  async function handleSuggestionSelect(event: CustomEvent<string>) { if (!isSending) await sendText(limitText(event.detail)); }
 
+  async function sendText(message: string) {
     ensureCurrentSession();
-
-    const message = limitText(firstMessage);
-    showWelcome = false;
     clearSuggestions();
-
-    // 添加用户消息
+    isAtBottom = true;
     chatStore.addMessage("user", message);
-
-    // —— 新增：立即保存用户消息到历史记录
-    if ($chatHistoryStore.currentSessionId) {
-      chatHistoryStore.updateSession(
-        $chatHistoryStore.currentSessionId,
-        $chatStore.messages,
-      );
-    }
-
-    // 发送到API
+    saveSession();
     await sendToAPI(message);
-  }
-
-  async function handleCustomTopic() {
-    showWelcome = false;
-    clearSuggestions();
-  }
-
-  async function handleSendMessage(event: CustomEvent<string>) {
-    if (isSending) return;
-
-    ensureCurrentSession();
-
-    const message = limitText(event.detail);
-    showWelcome = false;
-    clearSuggestions();
-    isAtBottom = true; // 发送消息时确保滚动到底部
-
-    // 添加用户消息
-    chatStore.addMessage("user", message);
-
-    // —— 新增：立即保存用户消息到历史记录
-    if ($chatHistoryStore.currentSessionId) {
-      chatHistoryStore.updateSession(
-        $chatHistoryStore.currentSessionId,
-        $chatStore.messages,
-      );
-    }
-
-    // 发送到API
-    await sendToAPI(message);
-  }
-
-  async function handleSuggestionSelect(event: CustomEvent<string>) {
-    if (isSending) return;
-
-    const suggestion = event.detail;
-    await handleSendMessage(new CustomEvent("send", { detail: suggestion }));
   }
 
   async function sendToAPI(message: string) {
     if (isSending) return;
-
     try {
       isSending = true;
       chatStore.setGenerating(true);
-
       const controller = new AbortController();
       chatStore.setController(controller);
-
-      let fullContent = "";
-
-      // 使用流式 API
-      for await (const chunk of APIService.streamChat(
-        $chatStore.messages,
-        controller.signal,
-      )) {
-        const piece =
-          typeof chunk === "string"
-            ? chunk
-            : (chunk?.choices?.[0]?.delta?.content ?? "");
-
+      let full = "";
+      for await (const chunk of APIService.streamChat($chatStore.messages, controller.signal)) {
+        const piece = typeof chunk === "string" ? chunk : (chunk?.choices?.[0]?.delta?.content ?? "");
         if (!piece) continue;
-
-        fullContent += piece;
-        chatStore.patchLastAssistantContent(fullContent);
-
-        // —— 新增：流式生成过程中实时保存
-        if ($chatHistoryStore.currentSessionId) {
-          chatHistoryStore.updateSession(
-            $chatHistoryStore.currentSessionId,
-            $chatStore.messages,
-          );
-        }
+        full += piece;
+        chatStore.patchLastAssistantContent(full);
+        saveSession();
       }
-
-      // 生成建议
-      if (fullContent && fullContent.trim().length > 0) {
-        await generateSuggestions(fullContent);
-      }
-
-      // —— 新增：流结束后做一次最终保存
-      if ($chatHistoryStore.currentSessionId) {
-        chatHistoryStore.updateSession(
-          $chatHistoryStore.currentSessionId,
-          $chatStore.messages,
-        );
-      }
+      if (full.trim()) await generateSuggestions(full);
+      saveSession();
     } catch (error: any) {
-      if (error?.name === "AbortError") {
-        console.log("请求被取消");
-      } else {
-        console.error("API请求错误:", error);
+      if (error?.name !== "AbortError") {
+        console.error("API request error:", error);
         chatStore.addMessage("assistant", "抱歉，服务器繁忙，请稍后再试。");
-
-        // —— 新增：错误消息也写入历史记录
-        if ($chatHistoryStore.currentSessionId) {
-          chatHistoryStore.updateSession(
-            $chatHistoryStore.currentSessionId,
-            $chatStore.messages,
-          );
-        }
+        saveSession();
       }
     } finally {
       chatStore.setGenerating(false);
@@ -227,17 +116,14 @@
 
   async function generateSuggestions(lastResponse: string) {
     try {
-      const newSuggestions = await APIService.generateSuggestions(lastResponse);
-      setSuggestions(newSuggestions);
-    } catch (error) {
-      console.error("生成建议失败:", error);
-    }
+      const items = await APIService.generateSuggestions(lastResponse);
+      setSuggestions(items);
+    } catch (e) { console.error("生成建议失败:", e); }
   }
 
   function handleNewChat() {
-    const sessionId = chatHistoryStore.createSession(); // 新会话成为当前会话
+    chatHistoryStore.createSession();
     chatStore.reset();
-    showWelcome = true;
     clearSuggestions();
     isAtBottom = true;
   }
@@ -246,71 +132,34 @@
     chatStore.clearMessages();
     clearSuggestions();
     isAtBottom = true;
-
-    // —— 可选：清空后立刻持久化当前会话的空消息列表
-    if ($chatHistoryStore.currentSessionId) {
-      chatHistoryStore.updateSession(
-        $chatHistoryStore.currentSessionId,
-        $chatStore.messages,
-      );
-    }
+    saveSession();
   }
 
   function handleSelectSession(event: CustomEvent<string>) {
     const sessionId = event.detail;
-
-    // —— 新增：切换前先保存当前会话
-    if ($chatHistoryStore.currentSessionId && $chatStore.messages.length >= 0) {
-      chatHistoryStore.updateSession(
-        $chatHistoryStore.currentSessionId,
-        $chatStore.messages,
-      );
-    }
-
+    saveSession();
     chatHistoryStore.selectSession(sessionId);
-
     const session = $chatHistoryStore.sessions.find((s) => s.id === sessionId);
     if (session) {
       chatStore.loadSession(session.messages);
-      showWelcome = session.messages.length === 0;
       clearSuggestions();
-
-      // 如果最后一条消息是助手的，生成建议
       if (session.messages.length > 0) {
-        const lastMessage = session.messages[session.messages.length - 1];
-        if (lastMessage.role === "assistant") {
-          generateSuggestions(lastMessage.content);
-        }
+        const last = session.messages[session.messages.length - 1];
+        if (last.role === "assistant") generateSuggestions(last.content);
       }
     }
-
-    sidebarOpen = false;
   }
 
   function handleDeleteSession(event: CustomEvent<string>) {
     const sessionId = event.detail;
     const deletingCurrent = $chatHistoryStore.currentSessionId === sessionId;
-
     chatHistoryStore.deleteSession(sessionId);
-
-    // 如果删除的是当前会话，创建新会话
-    if (deletingCurrent) {
-      handleNewChat();
-    }
+    if (deletingCurrent) handleNewChat();
   }
 
-  function toggleSidebar() {
-    sidebarOpen = !sidebarOpen;
-  }
-
-  function handleOpenSettings() {
-    settingsOpen = true;
-    sidebarOpen = false;
-  }
-
-  function handleCloseSettings() {
-    settingsOpen = false;
-  }
+  const toggleSidebar = () => (sidebarOpen = !sidebarOpen);
+  const handleOpenSettings = () => (settingsOpen = true);
+  const handleCloseSettings = () => (settingsOpen = false);
 </script>
 
 <svelte:head>
@@ -318,164 +167,110 @@
   <meta name="description" content="DeepSeek AI智能助手，支持多种话题对话" />
 </svelte:head>
 
-<!-- Sidebar -->
-<Sidebar
+<!-- 整体容器：头部 + 下方两栏布局 -->
+<div class="mx-auto flex h-screen w-full flex-col overflow-hidden border border-gray-100 bg-white shadow-2xl">
+  <!-- Header -->
+  <header
+    class="flex flex-shrink-0 items-center justify-between border-b border-blue-800/20 px-4 py-2 text-white"
+    style="background:linear-gradient(135deg,#2563eb 0%,#1d4ed8 50%,#1e40af 100%)"
+  >
+    <div class="flex min-w-0 flex-1 items-center space-x-2 md:space-x-3">
+      <div class="flex min-w-0 items-center">
+        <div class="hidden h-8 w-8 flex-shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white/20 backdrop-blur-sm md:flex">
+          <div class="h-4 w-4 rounded bg-gradient-to-br from-white to-blue-200" />
+        </div>
+        <h1 class="truncate pl-3 text-lg font-bold tracking-tight md:text-xl">Deepseek 智能助手</h1>
+      </div>
+    </div>
+    <div class="flex flex-shrink-0 items-center gap-2">
+      <ModelSelector />
+    </div>
+  </header>
+
+  <!-- Main Area: sidebar + chat -->
+  <div class="flex min-h-0 flex-1 overflow-hidden">
+    <!-- Sidebar 区域：打开时占 1/7，关闭时缩为图标栏宽度 -->
+    <aside
+      class={`relative flex h-full flex-col border-r border-gray-200 bg-white transition-all duration-300 ${sidebarOpen ? 'basis-1/6 max-w-1/6' : 'w-14 basis-14 max-w-14'}`}
+    >
+      <!-- 折叠时的窄栏：仅保留图标按钮 -->
+      {#if !sidebarOpen}
+        <div class="flex h-full flex-col items-center justify-between py-3">
+          <button class="rounded-lg p-2 text-gray-600 hover:bg-gray-100" on:click={toggleSidebar}>
+            <Menu size={20} />
+          </button>
+          <div class="pb-2 text-[10px] text-gray-400">v</div>
+        </div>
+        
+      {:else}
+        <!-- 展开时渲染完整 Sidebar 组件 -->
+        <Sidebar
   isOpen={sidebarOpen}
   on:newChat={handleNewChat}
   on:selectSession={handleSelectSession}
   on:deleteSession={handleDeleteSession}
   on:openSettings={handleOpenSettings}
+  on:toggleSidebar={() => (sidebarOpen = !sidebarOpen)} 
 />
 
-<!-- Settings Modal -->
-<SettingsModal isOpen={settingsOpen} on:close={handleCloseSettings} />
+      {/if}
+    </aside>
 
-<!-- Sidebar Overlay -->
-{#if sidebarOpen}
-  <div
-    class="sidebar-overlay fixed inset-0 bg-black bg-opacity-50 z-30"
-    on:click={() => (sidebarOpen = false)}
-  ></div>
-{/if}
+    <!-- Chat 主区域，占 6/7 或剩余空间 -->
+    <main class="flex min-w-0 flex-1 flex-col overflow-hidden bg-gradient-to-br from-gray-50 via-white to-blue-50">
+      {#if showWelcome}
+        <WelcomeScreen on:selectTopic={handleTopicSelect} on:customTopic={handleCustomTopic} />
+      {:else}
+        <div
+          bind:this={messagesContainer}
+          class="custom-scrollbar flex min-h-0 flex-1 flex-col space-y-4 overflow-y-auto p-4 md:space-y-6 md:p-6"
+          on:scroll={handleScroll}
+        >
+          {#each $chatStore.messages as message (message.id)}
+            <ChatMessage {message} />
+          {/each}
 
-<div
-  class="app-container flex flex-col h-screen max-w-full mx-auto bg-white shadow-2xl border border-gray-100"
->
-  <!-- Header -->
-  <header
-    class="header-bar bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg flex-shrink-0 relative z-10 md:relative fixed top-0 left-0 right-0 md:top-auto md:left-auto md:right-auto"
-  >
-    <div class="header-left">
-      <button class="menu-btn" on:click={toggleSidebar}>
-        <Menu size={20} />
-      </button>
-      <div class="header-brand flex items-center space-x-3">
-        <div class="hidden md:block">
-          <div class="brand-icon">
-            <div class="icon-gradient"></div>
+          {#if $chatStore.generating}
+            <TypingIndicator />
+          {/if}
+
+          <div class="translate-y-0 px-4 pb-2 opacity-100 transition-all duration-300 md:px-6 md:pb-4">
+            <SuggestionsPanel on:selectSuggestion={handleSuggestionSelect} />
           </div>
         </div>
-        <h1 class="header-title text-lg md:text-xl">Deepseek 智能助手</h1>
-      </div>
-    </div>
+      {/if}
 
-    <div class="header-right flex items-center space-x-2">
-      <ModelSelector />
-    </div>
-  </header>
+      <!-- Input Section -->
+      <div class="relative z-10 flex-shrink-0 border-t border-gray-200 bg-white shadow-lg">
+        <ChatInput disabled={$chatStore.generating || isSending} on:send={handleSendMessage} />
 
-  <!-- Chat Container -->
-  <div
-    class="chat-container flex-1 overflow-hidden flex flex-col bg-gradient-to-br from-gray-50 via-white to-blue-50 min-h-0"
-  >
-    {#if showWelcome}
-      <WelcomeScreen
-        on:selectTopic={handleTopicSelect}
-        on:customTopic={handleCustomTopic}
-      />
-    {:else}
-      <div
-        bind:this={messagesContainer}
-        class="messages flex-1 overflow-y-auto p-4 md:p-6 space-y-4 md:space-y-6 custom-scrollbar min-h-0"
-        on:scroll={handleScroll}
-      >
-        {#each $chatStore.messages as message (message.id)}
-          <ChatMessage {message} />
-        {/each}
+        <!-- 移动端操作按钮 -->
+        <div class="border-t border-gray-200 bg-gray-50 p-3 lg:hidden">
+          <div class="flex justify-between space-x-3">
+            <button
+              type="button"
+              on:click={handleNewChat}
+              class="flex items-center space-x-2 rounded-xl border border-blue-200 bg-white px-3 py-2 text-sm font-medium text-blue-600 shadow-sm transition hover:border-blue-300 hover:bg-blue-50 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+            >
+              <Plus size={14} />
+              <span>新对话</span>
+            </button>
 
-        {#if $chatStore.generating}
-          <TypingIndicator />
-        {/if}
-
-        <div
-          class="suggestions-wrapper px-4 md:px-6 pb-2 md:pb-4 flex-shrink-0 opacity-100 translate-y-0 transition-all duration-300"
-        >
-          <SuggestionsPanel on:selectSuggestion={handleSuggestionSelect} />
+            <button
+              type="button"
+              on:click={handleClearChat}
+              disabled={!hasMessages}
+              class="flex items-center space-x-2 rounded-xl border border-red-200 bg-white px-3 py-2 text-sm font-medium text-red-600 shadow-sm transition hover:border-red-300 hover:bg-red-50 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <Trash2 size={14} />
+              <span>清空对话</span>
+            </button>
+          </div>
         </div>
       </div>
-    {/if}
-  </div>
-
-  <!-- Input Section -->
-  <div
-    class="input-wrapper bg-white border-t border-gray-200 shadow-lg flex-shrink-0 relative z-10 md:relative md:bottom-auto fixed bottom-0 left-0 right-0"
-  >
-    <ChatInput
-      disabled={$chatStore.generating || isSending}
-      on:send={handleSendMessage}
-    />
-
-    <!-- 移动端的操作按钮 -->
-    <div
-      class="mobile-actions lg:hidden bg-gray-50 border-t border-gray-200 p-3"
-    >
-      <div class="flex justify-between space-x-3">
-        <button
-          type="button"
-          on:click={handleNewChat}
-          class="flex items-center space-x-2 border border-blue-200 bg-white px-3 py-2 text-sm font-medium text-blue-600 transition-all duration-200 hover:bg-blue-50 hover:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 rounded-xl shadow-sm hover:shadow-md"
-        >
-          <Plus size={14} />
-          <span>新对话</span>
-        </button>
-
-        <button
-          type="button"
-          on:click={handleClearChat}
-          disabled={!hasMessages}
-          class="flex items-center space-x-2 border border-red-200 bg-white px-3 py-2 text-sm font-medium text-red-600 transition-all duration-200 hover:bg-red-50 hover:border-red-300 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl shadow-sm hover:shadow-md"
-        >
-          <Trash2 size={14} />
-          <span>清空对话</span>
-        </button>
-      </div>
-    </div>
+    </main>
   </div>
 </div>
 
-<style>
-  .app-container {
-    @apply w-full h-screen overflow-hidden;
-  }
-
-  .header-bar {
-    @apply flex items-center justify-between px-4 md:px-6 py-3 md:py-4 border-b border-blue-800/20;
-    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 50%, #1e40af 100%);
-  }
-
-  .header-left {
-    @apply flex items-center space-x-2 md:space-x-3 flex-1 min-w-0;
-  }
-
-  .header-brand {
-    @apply flex items-center min-w-0;
-  }
-
-  .brand-icon {
-    @apply w-6 h-6 md:w-8 md:h-8 rounded-lg bg-white/20 backdrop-blur-sm flex items-center justify-center relative overflow-hidden flex-shrink-0;
-  }
-
-  .icon-gradient {
-    @apply w-3 h-3 md:w-4 md:h-4 rounded bg-gradient-to-br from-white to-blue-200;
-  }
-
-  .menu-btn {
-    @apply p-2 text-white/80 hover:text-white hover:bg-white/20 transition-all duration-200 rounded-lg backdrop-blur-sm flex-shrink-0;
-  }
-
-  .header-title {
-    @apply font-bold text-white tracking-tight truncate;
-  }
-
-  .header-right {
-    @apply flex-shrink-0;
-  }
-
-  .suggestions-wrapper {
-    @apply relative;
-  }
-
-  .input-wrapper {
-    @apply relative;
-  }
-</style>
+<!-- 设置弹窗 -->
+<SettingsModal isOpen={settingsOpen} on:close={handleCloseSettings} />
