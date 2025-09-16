@@ -230,7 +230,8 @@
                                         获取中...
                                     {:else}
                                         <RefreshCw size={16} />
-                                        获取模型列表
+                                        <span class="ml-2">获取模型列表</span>
+                                        
                                     {/if}
                                 </button>
 
