@@ -28,7 +28,6 @@
   let settingsOpen = false;
   let isAtBottom = true;
   let isSending = false; // 防止重复发送
-  let suggestionsVisible = true;
 
   // 响应式状态
   $: hasMessages = $chatStore.messages.length > 0;
@@ -87,14 +86,7 @@
     const { scrollTop, scrollHeight, clientHeight } = messagesContainer;
     const threshold = 50; // 50px threshold
     const newIsAtBottom = scrollTop + clientHeight >= scrollHeight - threshold;
-    
-    // 如果用户向上滚动，隐藏建议面板
-    if (!newIsAtBottom && isAtBottom) {
-      suggestionsVisible = false;
-    } else if (newIsAtBottom && !isAtBottom) {
-      suggestionsVisible = true;
-    }
-    
+
     isAtBottom = newIsAtBottom;
   }
 
@@ -359,17 +351,16 @@
       </button>
       <div class="header-brand flex items-center space-x-3">
         <div class="hidden md:block">
-        <div class="brand-icon">
-          <div class="icon-gradient"></div>
+          <div class="brand-icon">
+            <div class="icon-gradient"></div>
+          </div>
         </div>
-        </div>
-                <h1 class="header-title text-lg md:text-xl">Deepseek 智能助手</h1>
-
+        <h1 class="header-title text-lg md:text-xl">Deepseek 智能助手</h1>
       </div>
     </div>
 
     <div class="header-right flex items-center space-x-2">
-        <ModelSelector />
+      <ModelSelector />
     </div>
   </header>
 
@@ -395,10 +386,12 @@
         {#if $chatStore.generating}
           <TypingIndicator />
         {/if}
-      </div>
 
-      <div class="suggestions-wrapper px-4 md:px-6 pb-2 md:pb-4 flex-shrink-0 {suggestionsVisible ? 'opacity-100 translate-y-0' : 'hidden'} transition-all duration-300">
-        <SuggestionsPanel on:selectSuggestion={handleSuggestionSelect} />
+        <div
+          class="suggestions-wrapper px-4 md:px-6 pb-2 md:pb-4 flex-shrink-0 opacity-100 translate-y-0 transition-all duration-300"
+        >
+          <SuggestionsPanel on:selectSuggestion={handleSuggestionSelect} />
+        </div>
       </div>
     {/if}
   </div>
