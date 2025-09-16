@@ -369,13 +369,6 @@
     </div>
 
     <div class="header-right flex items-center space-x-2">
-      <!-- 移动端设置按钮 -->
-      <button
-        class="md:hidden p-2 text-white/80 hover:text-white hover:bg-white/20 transition-all duration-200 rounded-lg backdrop-blur-sm"
-        on:click={handleOpenSettings}
-      >
-        <Settings size={18} />
-      </button>
         <ModelSelector />
     </div>
   </header>

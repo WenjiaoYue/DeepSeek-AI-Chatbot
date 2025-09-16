@@ -59,11 +59,11 @@
 }
 
 .prose-chat pre {
-  @apply bg-gray-100 p-3 overflow-x-auto border text-sm;
+  @apply bg-gray-700 p-3 overflow-x-auto border text-sm;
 }
 
 .prose-chat code {
-  @apply bg-gray-100 px-1.5 py-0.5 text-sm border;
+  @apply bg-gray-700 px-1.5 py-0.5 text-sm;
 }
 
 .prose-chat pre code {
