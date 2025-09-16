@@ -27,44 +27,45 @@
 <svelte:window on:click={handleClickOutside} />
 
 <div class="model-selector relative z-[60] overflow-visible">
-  <button 
-    class="selector-button group flex items-center gap-2 rounded-lg px-2 py-1 md:px-3 md:py-1.5
-           bg-white/80 hover:bg-white border border-gray-200 shadow-sm transition-colors"
-    on:click|stopPropagation={toggleDropdown}
-  >
-    <div class="selector-icon shrink-0 grid place-items-center">
-      <Cpu size={18} />
-    </div>
+<button 
+  class="selector-button group flex items-center gap-1 rounded px-1 py-0.5
+         md:gap-2 md:px-3 md:py-2
+         bg-white/30 md:hover:bg-white md:border md:border-gray-200 md:shadow-sm
+         transition-colors"
+  on:click|stopPropagation={toggleDropdown}
+>
+  <!-- 图标（只在桌面端显示） -->
+  <div class="selector-icon shrink-0 grid place-items-center hidden md:block">
+    <Cpu size={18} />
+  </div>
 
-    <!-- 文本区域 -->
-    <div class="selector-content hidden md:flex md:flex-col md:min-w-[10rem] md:max-w-[18rem]">
-      <div class="config-name text-sm font-medium text-gray-900 break-words">
-        {selectedConfig?.name || '未选择配置'}
-      </div>
-      <div class="model-name text-xs text-gray-500 break-words">
-        {$apiConfigStore.selectedModel || '未选择模型'}
-      </div>
+  <!-- 文本区域（只在桌面端显示） -->
+  <div class="selector-content hidden md:flex md:flex-col md:min-w-[10rem] md:max-w-[18rem]">
+    <div class="config-name text-sm font-medium text-gray-900 break-words">
+      {selectedConfig?.name || '未选择配置'}
     </div>
+    <div class="model-name text-xs text-gray-500 break-words">
+      {$apiConfigStore.selectedModel || '未选择模型'}
+    </div>
+  </div>
 
-    <div class="selector-indicator flex items-center gap-1">
-      <div class="hidden md:block">
-        <span class="inline-block h-2 w-2 rounded-full
-                     {selectedConfig ? 'bg-emerald-500' : 'bg-gray-300'}"></span>
-      </div>
-      <ChevronDown
-        size={16}
-        class="chevron transition-transform duration-200 text-gray-700 {isOpen ? 'rotate-180' : ''}"
-      />
+  <!-- 指示器 -->
+  <div class="selector-indicator flex items-center gap-1">
+    <div class="hidden md:block">
+      <span class="inline-block h-2 w-2 rounded-full
+                   {selectedConfig ? 'bg-emerald-500' : 'bg-gray-300'}"></span>
     </div>
-  </button>
+    <ChevronDown
+      size={16}
+      class="chevron transition-transform duration-200 text-white md:text-gray-700 {isOpen ? 'rotate-180' : ''}"
+    />
+  </div>
+</button>
+
 
   {#if isOpen && availableModels.length > 0}
-    <!-- 关键：小屏 fixed 贴边，md 起 absolute 相对按钮 -->
     <div
-      class="dropdown fixed md:absolute top-[56px] md:top-full right-0 mt-2 z-[70]
-             w-[min(18rem,calc(100vw-1rem))] md:w-64
-             max-h-80 overflow-auto
-             rounded-xl border border-gray-200 bg-white shadow-xl origin-top-right"
+      class="dropdown-menu"
     >
       {#each availableModels as model}
         <button
@@ -96,7 +97,14 @@
   }
   
   .selector-button {
-    @apply flex items-center w-full px-4 py-3 bg-white/95 backdrop-blur-sm border border-white/40 text-left hover:bg-white hover:border-white/60 focus:outline-none focus:ring-2 focus:ring-white/50 transition-all duration-200 shadow-sm hover:shadow-md rounded-lg;
+    @apply p-2 text-white/80 hover:text-white hover:bg-white/20 transition-all duration-200 rounded-lg backdrop-blur-sm;
+  }
+  
+  /* 桌面端样式 */
+  @media (min-width: 768px) {
+    .selector-button {
+      @apply flex items-center w-full px-4 py-3 bg-white/95 backdrop-blur-sm border border-white/40 text-left hover:bg-white hover:border-white/60 focus:outline-none focus:ring-2 focus:ring-white/50 transition-all duration-200 shadow-sm hover:shadow-md rounded-lg;
+    }
   }
   
   .selector-icon {
@@ -132,11 +140,39 @@
   }
   
   .chevron {
-    @apply text-gray-600 group-hover:text-gray-800;
+    @apply text-white/80 group-hover:text-white;
+  }
+  
+  /* 桌面端 chevron 颜色 */
+  @media (min-width: 768px) {
+    .chevron {
+      @apply text-gray-600 group-hover:text-gray-800;
+    }
   }
   
   .dropdown {
     @apply absolute top-full left-0 right-0 mt-2 bg-white border border-gray-300 shadow-2xl z-50 max-h-64 overflow-y-auto backdrop-blur-sm rounded-xl;
+  }
+  
+  .dropdown-menu {
+    @apply fixed md:absolute z-[70] max-h-80 overflow-auto rounded-xl border border-gray-200 bg-white shadow-xl;
+    
+    /* 移动端定位 */
+    width: calc(100vw - 16px);
+    max-width: 18rem;
+    top: 60px;
+    right: 8px;
+  }
+  
+  /* 桌面端定位 */
+  @media (min-width: 768px) {
+    .dropdown-menu {
+      position: absolute;
+      top: calc(100% + 8px);
+      left: 0;
+      right: auto;
+      width: 16rem;
+    }
   }
   
   .dropdown-item {
