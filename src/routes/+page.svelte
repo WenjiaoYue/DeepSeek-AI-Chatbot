@@ -404,7 +404,7 @@
         {/if}
       </div>
 
-      <div class="suggestions-wrapper px-4 md:px-6 pb-2 md:pb-4 flex-shrink-0 {suggestionsVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'} transition-all duration-300">
+      <div class="suggestions-wrapper px-4 md:px-6 pb-2 md:pb-4 flex-shrink-0 {suggestionsVisible ? 'opacity-100 translate-y-0' : 'hidden'} transition-all duration-300">
         <SuggestionsPanel on:selectSuggestion={handleSuggestionSelect} />
       </div>
     {/if}
