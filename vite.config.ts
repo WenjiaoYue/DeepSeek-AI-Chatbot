@@ -13,16 +13,16 @@
 // limitations under the License.
 
 import type { UserConfig } from "vite";
-import { sveltekit } from '@sveltejs/kit/vite';
+import { sveltekit } from "@sveltejs/kit/vite";
 
 const config: UserConfig = {
-	plugins: [sveltekit()],
-	optimizeDeps: {
-		exclude: ['@sveltejs/kit']
-	},
-	server: {
-		allowedHosts: true
-	}
+  plugins: [sveltekit()],
+  optimizeDeps: {
+    exclude: ["@sveltejs/kit"],
+  },
+  server: {
+    allowedHosts: true,
+  },
 };
 
 export default config;

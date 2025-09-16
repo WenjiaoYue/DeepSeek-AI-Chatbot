@@ -66,7 +66,7 @@
   }
   
   .message-bubble {
-    @apply max-w-[75%] p-4 shadow-lg animate-fade-in relative;
+    @apply max-w-[85%] p-4 shadow-lg animate-fade-in relative;
   }
   
   .message-user {

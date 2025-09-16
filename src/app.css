@@ -15,8 +15,8 @@
 
 @layer components {
   .topic-btn {
-    @apply px-4 py-2 md:px-8 md:py-4 font-semibold text-xs md:text-sm transition-all duration-300 hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-offset-2 transform hover:scale-105 active:scale-95;
-    border-radius: 12px;
+    @apply px-3 py-2 md:px-6 md:py-3 font-semibold transition-all duration-300 hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-offset-2 transform hover:scale-105 active:scale-95;
+    border-radius: 10px;
   }
   
   .topic-btn-primary {
@@ -28,7 +28,7 @@
   }
   
   .message-bubble {
-    @apply max-w-[85%] p-5 shadow-xl animate-fade-in;
+    @apply max-w-[85%] p-4 md:p-5 shadow-xl animate-fade-in;
     border-radius: 16px;
   }
   
@@ -51,15 +51,15 @@
 .prose-chat h4,
 .prose-chat h5,
 .prose-chat h6 {
-  @apply mt-4 mb-2 first:mt-0;
+  @apply mt-3 mb-2 first:mt-0;
 }
 
 .prose-chat p {
-  @apply mb-3 last:mb-0;
+  @apply mb-2 last:mb-0;
 }
 
 .prose-chat pre {
-  @apply bg-gray-100 p-4 overflow-x-auto border;
+  @apply bg-gray-100 p-3 overflow-x-auto border text-sm;
 }
 
 .prose-chat code {
@@ -76,7 +76,7 @@
 
 .prose-chat ul,
 .prose-chat ol {
-  @apply pl-6 mb-3;
+  @apply pl-6 mb-2;
 }
 
 .prose-chat li {
@@ -120,7 +120,7 @@
 }
 
 .custom-scrollbar::-webkit-scrollbar {
-  width: 8px;
+  width: 6px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {

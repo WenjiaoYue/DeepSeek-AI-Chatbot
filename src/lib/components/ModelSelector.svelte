@@ -34,13 +34,13 @@
     <div class="selector-icon">
       <Cpu size={18} />
     </div>
-    <div class="selector-content">
+    <div class="selector-content hidden md:block">
       <div class="config-name">{selectedConfig?.name || '未选择配置'}</div>
       <div class="model-name">{$apiConfigStore.selectedModel || '未选择模型'}</div>
     </div>
     <div class="selector-indicator">
-      <div class="status-dot {selectedConfig ? 'connected' : 'disconnected'}"></div>
-      <ChevronDown size={16} class="chevron {isOpen ? 'rotate-180' : ''} transition-transform duration-200" />
+      <div class="status-dot hidden md:block {selectedConfig ? 'connected' : 'disconnected'}"></div>
+      <ChevronDown size={16} class="chevron {isOpen ? 'rotate-180' : ''} transition-transform duration-200 text-gray-700" />
     </div>
   </button>
   

@@ -9,21 +9,36 @@
   function handleSuggestionClick(suggestion: string) {
     dispatch('selectSuggestion', suggestion);
   }
+
+  let showSuggestions = true;
+
+function closeSuggestions() {
+  showSuggestions = false;
+}
+
 </script>
 
-{#if $suggestions.length > 0}
-  <div class="suggestions-container p-6 animate-fade-in">
-    <div class="suggestions-title text-center mb-4">
-      <span class="text-sm font-medium text-indigo-600">💡 您可能想问</span>
+{#if showSuggestions && $suggestions.length > 0}
+  <div class="suggestions-container relative p-3 md:p-6 animate-fade-in">
+    <button 
+      class="absolute top-2 right-2 text-gray-400 hover:text-gray-600 transition"
+      on:click={closeSuggestions}
+    >
+      ✕
+    </button>
+
+    <div class="suggestions-title text-center mb-2 md:mb-4">
+      <span class="text-xs md:text-sm font-medium text-indigo-600">💡 您可能想问</span>
     </div>
-    <div class="flex flex-wrap justify-center gap-3">
+
+    <div class="flex flex-wrap justify-center gap-2 md:gap-3">
       {#each $suggestions as suggestion}
         <button
           class="suggestion-chip group transform transition-all duration-300 hover:scale-105 active:scale-95"
           on:click={() => handleSuggestionClick(suggestion)}
         >
           <div class="suggestion-content">
-            <span class="suggestion-text">{suggestion}</span>
+            <span class="suggestion-text text-xs md:text-sm">{suggestion}</span>
             <div class="suggestion-glow"></div>
           </div>
         </button>
@@ -39,7 +54,7 @@
   }
   
   .suggestion-chip {
-    @apply relative bg-gradient-to-r from-indigo-50 to-blue-50 border border-indigo-200 px-5 py-3 text-sm font-medium text-indigo-700 cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 overflow-hidden;
+    @apply relative bg-gradient-to-r from-indigo-50 to-blue-50 border border-indigo-200 px-3 md:px-5 py-2 md:py-3 font-medium text-indigo-700 cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 overflow-hidden;
     border-radius: 12px;
     box-shadow: 0 2px 8px rgba(99, 102, 241, 0.1);
     transition: all 0.3s ease;

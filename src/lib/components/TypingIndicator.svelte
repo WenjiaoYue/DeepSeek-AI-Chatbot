@@ -5,7 +5,7 @@
     </div>
   </div>
   
-  <div class="typing-bubble flex items-center space-x-1">
+  <div class="flex items-center space-x-1">
     <span class="text-sm text-gray-600 dark:text-gray-400 mr-2">正在思考</span>
     <div class="typing-dot"></div>
     <div class="typing-dot"></div>

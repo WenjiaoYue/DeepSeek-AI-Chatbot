@@ -49,7 +49,7 @@
   }
 </script>
 
-<div class="sidebar {isOpen ? 'sidebar-open' : 'sidebar-closed'}">
+<div class="sidebar {isOpen ? 'sidebar-open' : 'sidebar-closed'}" style="z-index: 40;">
   <div class="sidebar-header bg-gradient-to-r from-gray-800 to-gray-900 text-white">
     <button
       class="new-chat-btn"
@@ -78,7 +78,7 @@
         >
           <div class="chat-item-content">
             <MessageSquare size={14} />
-            <div class="chat-item-text">
+            <div class="chat-item-text ml-4">
               <div class="chat-title">{session.title}</div>
               <div class="chat-date">{formatDate(session.updatedAt)}</div>
             </div>
@@ -104,8 +104,9 @@
 
 <style>
   .sidebar {
-    @apply fixed left-0 top-0 h-full bg-white border-r border-gray-200 transition-all duration-300 z-40 shadow-2xl;
+    @apply fixed left-0 top-0 h-full bg-white border-r border-gray-200 transition-all duration-300 shadow-2xl;
     width: 280px;
+    z-index: 40;
   }
   
   .sidebar-closed {
