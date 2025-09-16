@@ -26,43 +26,69 @@
 
 <svelte:window on:click={handleClickOutside} />
 
-<div class="model-selector">
+<div class="model-selector relative z-[60] overflow-visible">
   <button 
-    class="selector-button group"
+    class="selector-button group flex items-center gap-2 rounded-lg px-2 py-1 md:px-3 md:py-1.5
+           bg-white/80 hover:bg-white border border-gray-200 shadow-sm transition-colors"
     on:click|stopPropagation={toggleDropdown}
   >
-    <div class="selector-icon">
+    <div class="selector-icon shrink-0 grid place-items-center">
       <Cpu size={18} />
     </div>
-    <div class="selector-content hidden md:block">
-      <div class="config-name">{selectedConfig?.name || '未选择配置'}</div>
-      <div class="model-name">{$apiConfigStore.selectedModel || '未选择模型'}</div>
+
+    <!-- 文本区域 -->
+    <div class="selector-content hidden md:flex md:flex-col md:min-w-[10rem] md:max-w-[18rem]">
+      <div class="config-name text-sm font-medium text-gray-900 break-words">
+        {selectedConfig?.name || '未选择配置'}
+      </div>
+      <div class="model-name text-xs text-gray-500 break-words">
+        {$apiConfigStore.selectedModel || '未选择模型'}
+      </div>
     </div>
-    <div class="selector-indicator">
-      <div class="status-dot hidden md:block {selectedConfig ? 'connected' : 'disconnected'}"></div>
-      <ChevronDown size={16} class="chevron {isOpen ? 'rotate-180' : ''} transition-transform duration-200 text-gray-700" />
+
+    <div class="selector-indicator flex items-center gap-1">
+      <div class="hidden md:block">
+        <span class="inline-block h-2 w-2 rounded-full
+                     {selectedConfig ? 'bg-emerald-500' : 'bg-gray-300'}"></span>
+      </div>
+      <ChevronDown
+        size={16}
+        class="chevron transition-transform duration-200 text-gray-700 {isOpen ? 'rotate-180' : ''}"
+      />
     </div>
   </button>
-  
+
   {#if isOpen && availableModels.length > 0}
-    <div class="dropdown">
+    <!-- 关键：小屏 fixed 贴边，md 起 absolute 相对按钮 -->
+    <div
+      class="dropdown fixed md:absolute top-[56px] md:top-full right-0 mt-2 z-[70]
+             w-[min(18rem,calc(100vw-1rem))] md:w-64
+             max-h-80 overflow-auto
+             rounded-xl border border-gray-200 bg-white shadow-xl origin-top-right"
+    >
       {#each availableModels as model}
         <button
-          class="dropdown-item {$apiConfigStore.selectedModel === model ? 'active' : ''} group"
+          class="dropdown-item w-full flex items-center justify-between gap-2 px-3 py-2
+                 hover:bg-gray-50 transition-colors
+                 { $apiConfigStore.selectedModel === model ? 'bg-blue-50' : '' }"
           on:click={() => selectModel(model)}
         >
-          <div class="model-info">
-            <Zap size={14} class="model-icon" />
-            <span class="model-text">{model}</span>
+          <div class="model-info flex items-center gap-2 min-w-0">
+            <Zap size={14} class="model-icon text-amber-500 shrink-0" />
+            <span class="model-text text-sm text-gray-800 break-words">
+              {model}
+            </span>
           </div>
           {#if $apiConfigStore.selectedModel === model}
-            <div class="check-mark">✓</div>
+            <div class="check-mark text-blue-600">✓</div>
           {/if}
         </button>
       {/each}
     </div>
   {/if}
 </div>
+
+
 
 <style>
   .model-selector {

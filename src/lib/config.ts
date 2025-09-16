@@ -20,11 +20,11 @@ export const TOPIC_FIRST_MESSAGES: Record<string, string> = {
 
 export const TOPIC_CATEGORIES = {
   practical: {
-    title: '实用主题',
-    topics: ['旅游规划', '健康饮食', '职业发展', '学习编程', '科技新闻']
-  },
-  entertainment: {
-    title: '娱乐主题',
-    topics: ['讲个笑话', '脑筋急转弯', '成语接龙']
+    title: '海南三亚',
+    topics: ['旅游规划', '特色美食', '免税攻略', '自贸前沿', '景点介绍']
   }
+  // entertainment: {
+  //   title: '娱乐主题',
+  //   topics: ['讲个笑话', '脑筋急转弯', '成语接龙']
+  // }
 };
