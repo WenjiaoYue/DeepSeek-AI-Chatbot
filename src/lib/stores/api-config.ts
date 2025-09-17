@@ -19,7 +19,7 @@ const initialState: APIConfigState = {
   configs: [
     {
       id: 'default',
-      name: 'DeepSeek',
+      name: 'DeepSeek v3.1 满血Gaudi单机版',
       baseURL: 'http://220.203.247.201:8043',
       apiKey: '123456',
       models: ['/models/DeepSeek-V3.1-G2'],
