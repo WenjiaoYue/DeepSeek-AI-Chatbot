@@ -27,8 +27,8 @@
     dispatch("selectSession", id);
   }
   // 删除：直接删除，无确认
-  function handleDeleteSession(id: string, event: Event) {
-    event.stopPropagation();
+  function handleDeleteSession(id: string, event?: Event) {
+    event?.stopPropagation();
     dispatch("deleteSession", id);
   }
   function handleOpenSettings() {
@@ -71,9 +71,9 @@
 {/if}
 
 {#if isOpen}
-  <!-- 移动端遮罩 -->
+  <!-- 移动端遮罩（不拦截触摸，避免遮到侧栏） -->
   <div
-    class="fixed inset-0 z-40 bg-black/30 transition-opacity lg:hidden"
+    class="fixed inset-0 z-40 bg-black/30 pointer-events-none transition-opacity lg:hidden"
     aria-hidden="true"
   />
 {/if}
@@ -93,9 +93,7 @@
 >
   <!-- Header -->
   <div
-    class="
-  
-  flex items-center justify-between border-b border-gray-200 bg-gradient-to-r from-slate-100 via-slate-200 to-slate-300 p-4"
+    class="flex items-center justify-between border-b border-gray-200 bg-gradient-to-r from-slate-100 via-slate-200 to-slate-300 p-4"
   >
     <button
       type="button"
@@ -133,38 +131,34 @@
   </div>
 
   <!-- Content -->
-  <div
-    class="flex flex-1 flex-col overflow-hidden bg-gradient-to-b from-white to-gray-50"
-  >
-    <h2
-      class="px-4 pt-4 text-xs font-bold uppercase tracking-wider text-gray-800 md:hidden"
-    >
+  <div class="flex flex-1 flex-col overflow-hidden bg-gradient-to-b from-white to-gray-50">
+    <h2 class="px-4 pt-4 text-xs font-bold uppercase tracking-wider text-gray-800 md:hidden">
       历史对话
     </h2>
 
     <div class="mt-3 flex-1 space-y-1 overflow-y-auto px-4 pb-4">
       {#each $chatHistoryStore.sessions as session (session.id)}
         <div
-          role="button"
           tabindex="0"
           aria-pressed={$chatHistoryStore.currentSessionId === session.id}
-          class="group flex items-center justify-between rounded-lg border border-transparent p-3 text-left outline-none transition
+          role="button"
+          class="cursor-pointer select-none group flex items-center justify-between rounded-lg border border-transparent p-3 text-left outline-none transition
                  hover:border-blue-200 hover:bg-blue-50 hover:shadow-sm
                  focus-visible:ring-2 focus-visible:ring-blue-500
                  {$chatHistoryStore.currentSessionId === session.id
-            ? 'bg-gradient-to-r from-blue-50 to-blue-100 border-blue-200 shadow-sm'
-            : ''}"
-          on:click={() => handleSelectSession(session.id)}
+                   ? 'bg-gradient-to-r from-blue-50 to-blue-100 border-blue-200 shadow-sm'
+                   : ''}"
+          style="touch-action: manipulation"      
+          on:click={() => handleSelectSession(session.id)}   
+          on:touchend|preventDefault={() => handleSelectSession(session.id)}  
           on:keydown={(e) =>
-            (e.key === "Enter" || e.key === " ") &&
-            handleSelectSession(session.id)}
+            (e.key === "Enter" || e.key === " ") && handleSelectSession(session.id)
+          }
         >
           <div class="flex min-w-0 flex-1 items-center gap-3">
             <MessageSquare size={14} class="shrink-0" />
             <div class="min-w-0 flex-1">
-              <div
-                class="truncate leading-tight text-xs font-medium text-gray-900"
-              >
+              <div class="truncate leading-tight text-xs font-medium text-gray-900">
                 {session.title}
               </div>
               <div class="truncate text-[0.6rem] text-gray-500 mt-1">
@@ -173,13 +167,14 @@
             </div>
           </div>
 
-          <!-- 只有删除按钮（无确认） -->
+          <!-- 删除按钮（无确认），在移动端也不拦截父节点 -->
           <button
             type="button"
             class="rounded p-1 text-gray-400 opacity-0 hover:text-red-600 group-hover:opacity-100 focus:opacity-100 focus-visible:ring-2 focus-visible:ring-red-500"
-            on:click={(e) => handleDeleteSession(session.id, e)}
-            aria-label="删除对话"
             title="删除"
+            aria-label="删除对话"
+            on:click={(e) => handleDeleteSession(session.id, e)}
+            on:touchend|stopPropagation|preventDefault={(e) => handleDeleteSession(session.id, e)}
           >
             <Trash2 size={12} />
           </button>
@@ -187,9 +182,7 @@
       {/each}
 
       {#if $chatHistoryStore.sessions.length === 0}
-        <div
-          class="flex flex-col items-center justify-center py-10 text-gray-500"
-        >
+        <div class="flex flex-col items-center justify-center py-10 text-gray-500">
           <MessageSquare size={24} />
           <span class="mt-2 text-sm">暂无历史对话</span>
         </div>
@@ -197,3 +190,8 @@
     </div>
   </div>
 </nav>
+
+<style>
+  /* 可选：iOS 点击高亮优化 */
+  [role="button"] { -webkit-tap-highlight-color: rgba(0,0,0,0.08); }
+</style>

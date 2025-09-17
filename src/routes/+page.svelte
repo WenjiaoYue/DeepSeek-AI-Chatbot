@@ -488,7 +488,7 @@
             <button
               type="button"
               on:click={handleClearChat}
-              disabled={!hasMessages}
+              disabled={!hasMessages || isCurrentSessionSending || $chatStore.generating}
               class="flex items-center space-x-2 rounded-xl border border-red-200 bg-white px-3 py-2 text-sm font-medium text-red-600 shadow-sm transition hover:border-red-300 hover:bg-red-50 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <Trash2 size={14} />
