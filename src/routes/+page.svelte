@@ -305,7 +305,7 @@
 
       <!-- Input Section -->
       <div
-        class="relative z-10 flex-shrink-0 mb-6"
+        class="relative z-10 flex-shrink-0 md:mb-6"
       >
         <ChatInput
           disabled={$chatStore.generating || isSending}
@@ -313,7 +313,7 @@
         />
 
         <!-- 移动端操作按钮 -->
-        <div class="border-t border-gray-200 bg-gray-50 p-3 lg:hidden">
+        <div class="mt-4 border-t border-gray-200 bg-gray-50 p-3 lg:hidden">
           <div class="flex justify-between space-x-3">
             <button
               type="button"
