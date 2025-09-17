@@ -479,7 +479,6 @@
             <button
               type="button"
               on:click={handleNewChat}
-              disabled={isCurrentSessionSending || $chatStore.generating}
               class="flex items-center space-x-2 rounded-xl border border-blue-200 bg-white px-3 py-2 text-sm font-medium text-blue-600 shadow-sm transition hover:border-blue-300 hover:bg-blue-50 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <Plus size={14} />
