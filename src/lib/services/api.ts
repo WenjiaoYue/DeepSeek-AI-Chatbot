@@ -122,7 +122,7 @@ export class APIService {
         temperature: 0.7,
       };
 
-      const response = await fetch(`${config.baseURL}/chat/completions`, {
+      const response = await fetch(`${config.baseURL}/v1/chat/completions`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
