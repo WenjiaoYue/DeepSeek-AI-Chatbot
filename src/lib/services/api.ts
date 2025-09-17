@@ -31,7 +31,7 @@ export class APIService {
       temperature: 0.7,
     };
 
-    const response = await fetch(`${config.baseURL}/v1/chat/completions`, {
+    const response = await fetch(`/v1/chat/completions`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -122,7 +122,7 @@ export class APIService {
         temperature: 0.7,
       };
 
-      const response = await fetch(`${config.baseURL}/v1/chat/completions`, {
+      const response = await fetch(`/v1/chat/completions`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -170,7 +170,7 @@ export class APIService {
 
   static async fetchModels(baseURL: string, apiKey: string): Promise<string[]> {
     try {
-      const response = await fetch(`${baseURL}/models`, {
+      const response = await fetch(`/models`, {
         headers: {
           Authorization: `Bearer ${apiKey}`,
         },
@@ -184,7 +184,7 @@ export class APIService {
       return data.data?.map((model: any) => model.id) || [];
     } catch (error) {
       console.error("获取模型列表错误:", error);
-      throw error;
+      throw error;  
     }
   }
 }
