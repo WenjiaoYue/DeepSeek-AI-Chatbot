@@ -30,9 +30,11 @@
         {message.content}
       </div>
     {/if}
+    {#if message.timestamp}
     <div class="message-time text-xs opacity-60 mt-2 text-right">
       {formatTime(message.timestamp)}
     </div>
+    {/if}
   </div>
   
   {#if message.role === 'user'}
