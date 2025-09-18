@@ -50,9 +50,9 @@ private static async makeRequest(messages: Message[], signal?: AbortSignal) {
 
   // 根据 baseURL 判断请求路径
   let endpoint = "/v1/chat/completions";
-  if (config.baseURL === "http://220.203.247.201:8031") {
+  if (config.baseURL === "http://220.203.247.201:8043") {
     endpoint = "/v1/chat/completions_PD";
-  } else if (config.baseURL === "http://220.203.247.201:8043") {
+  } else if (config.baseURL === "http://220.203.247.201:8031") {
     endpoint = "/v1/chat/completions";
   }
 
