@@ -11,7 +11,7 @@
 
   // ===== 语音识别：状态细分 =====
   let recognition: any = null;
-  let micSupported = true;
+  let micSupported = false;
 
   // 三种状态
   let isStarting = false;     // 已点开始，等待 onstart

@@ -1,44 +1,62 @@
 <script lang="ts">
-  import { apiConfigStore } from '../stores/api-config';
-  import { ChevronDown, Cpu, Zap } from 'lucide-svelte';
+  import { apiConfigStore } from "../stores/api-config";
+  import { ChevronDown, Cpu, Zap } from "lucide-svelte";
 
   let isOpen = false;
 
-  // 选中配置与可用模型
-  $: selectedConfig = $apiConfigStore.configs.find(
-    (c) => c.id === $apiConfigStore.selectedConfigId
-  );
-  $: availableModels = selectedConfig?.models || [];
+  $: configs = $apiConfigStore.configs;
 
-  function toggleDropdown() {
-    isOpen = !isOpen;
+  // 规范化 models，并带上 configId / configName，构成“全量模型列表”
+  type ModelItem = string | { id: string; name: string };
+  function toObj(m: ModelItem) {
+    return typeof m === "string" ? { id: m, name: m } : m;
   }
 
-  function selectModel(model: string) {
-    apiConfigStore.selectModel(model);
+  $: allModels = configs.flatMap(c =>
+    (c.models ?? []).map((m: ModelItem) => {
+      const mm = toObj(m);
+      return {
+        id: mm.id,
+        name: mm.name,
+        configId: c.id,
+        configName: c.name
+      };
+    })
+  );
+
+  // 选中配置 & 选中模型 name
+  $: selectedConfig = configs.find(c => c.id === $apiConfigStore.selectedConfigId);
+  $: selectedModelName =
+    allModels.find(m => m.id === $apiConfigStore.selectedModel)?.name ??
+    $apiConfigStore.selectedModel ?? "未选择模型";
+
+  function toggleDropdown() { isOpen = !isOpen; }
+
+  // 选模型时，同时切换到该模型所在配置
+  function selectModel(modelId: string) {
+    const target = allModels.find(m => m.id === modelId);
+    if (target) {
+      apiConfigStore.selectConfig(target.configId); // 切换配置
+      apiConfigStore.selectModel(modelId);          // 选中模型
+    } else {
+      apiConfigStore.selectModel(modelId);
+    }
     isOpen = false;
   }
 
-  // 点击组件外关闭
   function handlePointerDownOutside(event: PointerEvent) {
     const target = event.target as Element;
-    if (!target.closest('[data-model-selector]')) {
-      isOpen = false;
-    }
+    if (!target.closest("[data-model-selector]")) isOpen = false;
   }
 
-  // iOS 双击缩放兜底：仅在第二次点按时阻止默认，不做状态切换（避免与 pointerup 重复）
   let lastTap = 0;
   function onTouchEnd(e: TouchEvent) {
     const now = Date.now();
-    if (now - lastTap < 350) {
-      e.preventDefault();
-    }
+    if (now - lastTap < 350) e.preventDefault();
     lastTap = now;
   }
 </script>
 
-<!-- 用 pointer 事件监听窗口外部点击 -->
 <svelte:window on:pointerdown={handlePointerDownOutside} />
 
 <div data-model-selector class="relative z-[60]">
@@ -80,7 +98,7 @@
     </div>
   </button>
 
-  {#if isOpen && availableModels.length > 0}
+  {#if isOpen && allModels.length > 0}
     <div
       id="model-menu"
       role="menu"
@@ -88,24 +106,25 @@
       class="fixed right-2 top-[60px] z-[70] max-h-80 w-[calc(100vw-16px)] overflow-auto rounded-xl border border-gray-200 bg-white/95 p-1 shadow-xl backdrop-blur-sm
              md:absolute md:left-0 md:right-auto md:top-[calc(100%+8px)] md:w-64"
     >
-      {#each availableModels as model}
-        <button
-          role="menuitem"
-          on:pointerup={() => selectModel(model)}
-          on:touchend={onTouchEnd}
-          class="w-full flex items-center justify-between gap-2 rounded-lg px-3 py-2 text-left text-sm text-gray-800 transition-colors hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 { $apiConfigStore.selectedModel === model ? 'bg-blue-50' : '' }"
-        >
-          <div class="flex items-center gap-2 min-w-0">
-            <Zap size={14} class="shrink-0 text-amber-500" />
-            <span class="truncate">{model}</span>
-          </div>
-          {#if $apiConfigStore.selectedModel === model}
-            <span aria-hidden="true" class="text-blue-600">✓</span>
-          {/if}
-        </button>
-      {/each}
-    </div>
-  {/if}
+    {#each allModels as model}
+      <button
+        role="menuitem"
+        aria-current={$apiConfigStore.selectedModel === model.id ? "true" : "false"}
+        on:pointerup={() => selectModel(model.id)}
+        on:touchend={onTouchEnd}
+        class="w-full flex items-center justify-between gap-2 rounded-lg px-3 py-2 text-left text-sm text-gray-800 transition-colors hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 {$apiConfigStore.selectedModel === model.id ? 'bg-blue-50' : ''}"
+      >
+        <div class="flex items-center gap-2 min-w-0">
+          <Zap size={14} class="shrink-0 text-amber-500" />
+          <span class="truncate">{model.name}</span>
+        </div>
+        {#if $apiConfigStore.selectedModel === model.id}
+          <span aria-hidden="true" class="text-blue-600">✓</span>
+        {/if}
+      </button>
+    {/each}
+  </div>
+{/if}
 </div>
 
 <style>

@@ -29,7 +29,10 @@
 
   // ✅ 并发关键：按“会话”管理的代次与进行中流
   const genBySession: Record<string, number> = {};
-  const inflightMap = new Map<string, { controller: AbortController; gen: number }>();
+  const inflightMap = new Map<
+    string,
+    { controller: AbortController; gen: number }
+  >();
 
   $: hasMessages = $chatStore.messages.length > 0;
   $: showWelcome = !hasMessages;
@@ -125,10 +128,12 @@
     const myGen = genBySession[sessionId];
 
     // 工作快照
-    const currentSession = $chatHistoryStore.sessions.find((s) => s.id === sessionId);
-    let workingMessages = JSON.parse(JSON.stringify(currentSession?.messages ?? $chatStore.messages));
-
-    // 不再预插入空助手消息 ✅
+    const currentSession = $chatHistoryStore.sessions.find(
+      (s) => s.id === sessionId,
+    );
+    let workingMessages = JSON.parse(
+      JSON.stringify(currentSession?.messages ?? $chatStore.messages),
+    );
 
     // 建立 controller 并登记到 inflightMap
     const controller = new AbortController();
@@ -140,6 +145,7 @@
     }
 
     let full = "";
+    let reasoningFull = ""; // ✅ 推理内容累计
     let started = false;
     let assistantMsgId: string | null = null;
 
@@ -150,7 +156,9 @@
       )) {
         // 代次失效则终止
         if (genBySession[sessionId] !== myGen) {
-          try { controller.abort(); } catch {}
+          try {
+            controller.abort();
+          } catch {}
           break;
         }
 
@@ -158,7 +166,19 @@
           typeof chunk === "string"
             ? chunk
             : (chunk?.choices?.[0]?.delta?.content ?? "");
-        if (!piece) continue;
+        
+
+        // ✅ 提取 reasoning_content
+        const rpiece =
+          typeof chunk === "string"
+            ? ""
+            : (chunk?.choices?.[0]?.delta?.reasoning_content ?? "");
+
+        console.log('rpiece', rpiece);
+        
+
+        // 两者都空就跳过
+        if (!piece && !rpiece) continue;
 
         if (!started) {
           started = true;
@@ -171,39 +191,61 @@
           const nowISO = new Date().toISOString();
           assistantMsgId = crypto.randomUUID?.() ?? String(Date.now());
 
+          const initialContent = piece || ""; // 允许先有推理、正文为空
+          const initialReasoning = rpiece || "";
+
           // 写入 workingMessages
           workingMessages.push({
             id: assistantMsgId,
             role: "assistant",
-            content: piece,      // 直接带首段内容
-            createdAt: nowISO,   // ✅ 有效时间戳
+            content: initialContent,
+            createdAt: nowISO,
             updatedAt: nowISO,
             status: "streaming",
+            meta: { reasoningContent: initialReasoning }, // ✅ 带上推理
           });
           chatHistoryStore.updateSession(sessionId, workingMessages);
 
-          // UI：新建一条助手消息（从首段内容开始显示）
+          // UI：新建助手消息 + 可选推理 meta
           if ($chatHistoryStore.currentSessionId === sessionId) {
-            chatStore.addMessage("assistant", piece);
+            chatStore.addMessage("assistant", initialContent);
+            if (initialReasoning) {
+              chatStore.patchLastAssistantMeta({
+                reasoningContent: initialReasoning,
+              });
+            }
           }
 
-          full = piece;
+          full = initialContent;
+          reasoningFull = initialReasoning;
           continue;
         }
 
         // 非首段：累加 & patch
-        full += piece;
+        if (piece) full += piece;
+        if (rpiece) reasoningFull += rpiece;
 
         // 更新 workingMessages 最后一条助手消息
         const lastIdx = workingMessages.length - 1;
         if (lastIdx >= 0 && workingMessages[lastIdx]?.role === "assistant") {
-          workingMessages[lastIdx].content = full;
+          if (piece) {
+            workingMessages[lastIdx].content = full;
+          }
+          // 确保 meta 存在
+          workingMessages[lastIdx].meta = workingMessages[lastIdx].meta || {};
+          if (rpiece) {
+            workingMessages[lastIdx].meta.reasoningContent = reasoningFull;
+          }
           workingMessages[lastIdx].updatedAt = new Date().toISOString();
         }
 
         // 若用户仍在该会话：更新 UI；否则只更新会话存档
         if ($chatHistoryStore.currentSessionId === sessionId) {
-          chatStore.patchLastAssistantContent(full);
+          if (piece) chatStore.patchLastAssistantContent(full);
+          if (rpiece)
+            chatStore.patchLastAssistantMeta({
+              reasoningContent: reasoningFull,
+            });
         }
         chatHistoryStore.updateSession(sessionId, workingMessages);
       }
@@ -224,8 +266,19 @@
         full.trim()
       ) {
         try {
-          const items = await APIService.generateSuggestions(full);
-          setSuggestions(items);
+          try {
+            const items = await APIService.generateSuggestions(full);
+            if (Array.isArray(items) && items.length > 0) {
+              setSuggestions(items);
+            } else {
+              console.log('items', items);
+              
+              setSuggestions(["能详细解释一下吗？", "有什么相关例子？", "还有其他建议吗？"]);
+            }
+          } catch (e) {
+            console.error("生成建议失败(兜底):", e);
+            setSuggestions(["能详细解释一下吗？", "有什么相关例子？", "还有其他建议吗？"]);
+          }
         } catch (e) {
           console.error("生成建议失败:", e);
         }
@@ -234,10 +287,8 @@
       if (error?.name !== "AbortError") {
         console.error("API request error:", error);
 
-        // 给该会话补一条错误提示（仅当仍是当前视图时更新 UI）
         const errText = "抱歉，服务器繁忙，请稍后再试。";
         if (!started) {
-          // 若还未开始就出错，则插入一条带时间的错误消息
           const nowISO = new Date().toISOString();
           workingMessages.push({
             id: crypto.randomUUID?.() ?? String(Date.now()),
@@ -253,7 +304,6 @@
             chatStore.addMessage("assistant", errText);
           }
         } else {
-          // 已经开始流：在最后一条助手消息后追加错误提示
           const lastIdx = workingMessages.length - 1;
           if (lastIdx >= 0 && workingMessages[lastIdx]?.role === "assistant") {
             workingMessages[lastIdx].content =
@@ -316,11 +366,12 @@
       if (session.messages.length > 0) {
         const last = session.messages[session.messages.length - 1];
         if (last.role === "assistant") {
-          // 可选：只在该会话没有进行中的流时再生成建议
           if (!inflightMap.has(sessionId)) {
             (async () => {
               try {
-                const items = await APIService.generateSuggestions(last.content ?? "");
+                const items = await APIService.generateSuggestions(
+                  last.content ?? "",
+                );
                 setSuggestions(items);
               } catch (e) {
                 console.error("生成建议失败:", e);
@@ -337,7 +388,9 @@
     // 若该会话有在跑的流，先中止
     const inflight = inflightMap.get(sessionId);
     if (inflight) {
-      try { inflight.controller.abort(); } catch {}
+      try {
+        inflight.controller.abort();
+      } catch {}
       inflightMap.delete(sessionId);
     }
     const deletingCurrent = $chatHistoryStore.currentSessionId === sessionId;
@@ -378,7 +431,9 @@
         <div
           class="hidden h-8 w-8 flex-shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white/20 backdrop-blur-sm md:flex"
         >
-          <div class="h-4 w-4 rounded bg-gradient-to-br from-white to-blue-200" />
+          <div
+            class="h-4 w-4 rounded bg-gradient-to-br from-white to-blue-200"
+          />
         </div>
         <h1 class="truncate pl-3 text-lg font-bold tracking-tight md:text-xl">
           Deepseek 智能助手
@@ -404,7 +459,9 @@
     >
       {#if !sidebarOpen}
         <!-- 折叠态的小图标栏：仅桌面端可见 -->
-        <div class="hidden h-full flex-col items-center justify-between py-3 md:flex">
+        <div
+          class="hidden h-full flex-col items-center justify-between py-3 md:flex"
+        >
           <button
             class="rounded-lg p-2 text-gray-600 hover:bg-gray-100"
             on:click={toggleSidebar}
@@ -467,7 +524,7 @@
       {/if}
 
       <!-- Input Section -->
-      <div class="relative z-10 flex-shrink-0 md:mb-6">
+      <div class="relative z-10 flex-shrink-0 md:mb-6 overflow-auto">
         <ChatInput
           disabled={isCurrentSessionSending || $chatStore.generating}
           on:send={handleSendMessage}
@@ -488,7 +545,9 @@
             <button
               type="button"
               on:click={handleClearChat}
-              disabled={!hasMessages || isCurrentSessionSending || $chatStore.generating}
+              disabled={!hasMessages ||
+                isCurrentSessionSending ||
+                $chatStore.generating}
               class="flex items-center space-x-2 rounded-xl border border-red-200 bg-white px-3 py-2 text-sm font-medium text-red-600 shadow-sm transition hover:border-red-300 hover:bg-red-50 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <Trash2 size={14} />
