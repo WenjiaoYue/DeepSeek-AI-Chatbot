@@ -107,7 +107,7 @@
 
     <button
       type="button"
-      class="hidden md:inline-flex rounded-lg p-2 text-slate-600 hover:bg-white/60 hover:text-slate-800
+      class="inline-flex rounded-lg p-2 text-slate-600 hover:bg-white/60 hover:text-slate-800
          opacity-0 transition-opacity
          lg:group-hover/sidebar:opacity-100 focus:opacity-100 focus-visible:ring-2 focus-visible:ring-blue-500"
       on:click={handleToggleSidebar}
@@ -116,7 +116,7 @@
     >
       <ChevronsLeft size={16} />
     </button>
-    <div class="flex items-center gap-1">
+    <!-- <div class="flex items-center gap-1">
       <button
         type="button"
         class="rounded-lg p-2 text-slate-600 hover:bg-white/60 hover:text-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
@@ -127,7 +127,7 @@
         <Settings size={16} />
         <span class="sr-only">设置</span>
       </button>
-    </div>
+    </div> -->
   </div>
 
   <!-- Content -->

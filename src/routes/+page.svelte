@@ -1,10 +1,10 @@
 <script lang="ts">
   import { onMount, afterUpdate } from "svelte";
+  import { writable } from "svelte/store";
   import { chatStore } from "$lib/stores/chat";
   import { chatHistoryStore } from "$lib/stores/chat-history";
   import { apiConfigStore } from "$lib/stores/api-config";
   import {
-    suggestions,
     setSuggestions,
     clearSuggestions,
   } from "$lib/stores/suggestions";
@@ -27,22 +27,29 @@
   let settingsOpen = false;
   let isAtBottom = true;
 
-  // ✅ 并发关键：按“会话”管理的代次与进行中流
+  // ✅ 并发代次：同一会话多次发送时的版本号
   const genBySession: Record<string, number> = {};
-  const inflightMap = new Map<
-    string,
-    { controller: AbortController; gen: number }
-  >();
+
+  // ✅ 用 Svelte store 包装 inflight Map（关键）
+  const inflightMapStore = writable<
+    Map<string, { controller: AbortController; gen: number }>
+  >(new Map());
 
   $: hasMessages = $chatStore.messages.length > 0;
   $: showWelcome = !hasMessages;
+
+  // ✅ 始终将“当前会话是否有流在跑”同步到全局 generating（用于输入禁用 & TypingIndicator）
+  $: {
+    const curId = $chatHistoryStore.currentSessionId;
+    const busy = curId ? $inflightMapStore.has(curId) : false;
+    chatStore.setGenerating(busy);
+  }
 
   // 仅禁用“当前会话”的输入
   $: isCurrentSessionSending = (() => {
     const id = $chatHistoryStore.currentSessionId;
     if (!id) return false;
-    const inflight = inflightMap.get(id);
-    return Boolean(inflight);
+    return $inflightMapStore.has(id);
   })();
 
   function ensureCurrentSession() {
@@ -56,9 +63,7 @@
 
   function saveSession(targetId?: string) {
     const id = targetId ?? $chatHistoryStore.currentSessionId;
-    if (id) {
-      chatHistoryStore.updateSession(id, $chatStore.messages);
-    }
+    if (id) chatHistoryStore.updateSession(id, $chatStore.messages);
   }
 
   onMount(() => {
@@ -110,7 +115,7 @@
     clearSuggestions();
     isAtBottom = true;
 
-    // 当前会话添加用户消息并落盘（不写时间，由首个 token 触发时再给助手写入时间）
+    // 当前会话添加用户消息并落盘
     chatStore.addMessage("user", message);
     saveSession();
 
@@ -118,7 +123,7 @@
     await sendToAPI();
   }
 
-  // 🚦 每个会话各自的流（支持并发）—— 懒插入助手消息：首个 token 到达时才插入
+  // 🚦 每个会话各自的流（支持并发）
   async function sendToAPI() {
     const sessionId = $chatHistoryStore.currentSessionId;
     if (!sessionId) return;
@@ -135,17 +140,18 @@
       JSON.stringify(currentSession?.messages ?? $chatStore.messages),
     );
 
-    // 建立 controller 并登记到 inflightMap
+    // 建立 controller 并登记到 inflightMapStore（返回新 Map 触发响应）
     const controller = new AbortController();
-    inflightMap.set(sessionId, { controller, gen: myGen });
+    inflightMapStore.update((m) => {
+      const copy = new Map(m);
+      copy.set(sessionId, { controller, gen: myGen });
+      return copy;
+    });
 
-    // 仅在当前会话显示 typing
-    if ($chatHistoryStore.currentSessionId === sessionId) {
-      chatStore.setGenerating(true);
-    }
+    // ❌ 不再直接 setGenerating(true)，由上面的响应式同步块接管
 
     let full = "";
-    let reasoningFull = ""; // ✅ 推理内容累计
+    let reasoningFull = "";
     let started = false;
     let assistantMsgId: string | null = null;
 
@@ -156,9 +162,7 @@
       )) {
         // 代次失效则终止
         if (genBySession[sessionId] !== myGen) {
-          try {
-            controller.abort();
-          } catch {}
+          try { controller.abort(); } catch {}
           break;
         }
 
@@ -166,32 +170,21 @@
           typeof chunk === "string"
             ? chunk
             : (chunk?.choices?.[0]?.delta?.content ?? "");
-        
 
-        // ✅ 提取 reasoning_content
         const rpiece =
           typeof chunk === "string"
             ? ""
             : (chunk?.choices?.[0]?.delta?.reasoning_content ?? "");
 
-        console.log('rpiece', rpiece);
-        
-
-        // 两者都空就跳过
         if (!piece && !rpiece) continue;
 
         if (!started) {
           started = true;
 
-          // 首个 token 到达：结束 typing，插入“带时间”的助手消息
-          if ($chatHistoryStore.currentSessionId === sessionId) {
-            chatStore.setGenerating(false);
-          }
-
           const nowISO = new Date().toISOString();
           assistantMsgId = crypto.randomUUID?.() ?? String(Date.now());
 
-          const initialContent = piece || ""; // 允许先有推理、正文为空
+          const initialContent = piece || "";
           const initialReasoning = rpiece || "";
 
           // 写入 workingMessages
@@ -202,11 +195,11 @@
             createdAt: nowISO,
             updatedAt: nowISO,
             status: "streaming",
-            meta: { reasoningContent: initialReasoning }, // ✅ 带上推理
+            meta: { reasoningContent: initialReasoning },
           });
           chatHistoryStore.updateSession(sessionId, workingMessages);
 
-          // UI：新建助手消息 + 可选推理 meta
+          // UI：新建助手消息 + 可选推理 meta（只作用当前会话）
           if ($chatHistoryStore.currentSessionId === sessionId) {
             chatStore.addMessage("assistant", initialContent);
             if (initialReasoning) {
@@ -225,13 +218,9 @@
         if (piece) full += piece;
         if (rpiece) reasoningFull += rpiece;
 
-        // 更新 workingMessages 最后一条助手消息
         const lastIdx = workingMessages.length - 1;
         if (lastIdx >= 0 && workingMessages[lastIdx]?.role === "assistant") {
-          if (piece) {
-            workingMessages[lastIdx].content = full;
-          }
-          // 确保 meta 存在
+          if (piece) workingMessages[lastIdx].content = full;
           workingMessages[lastIdx].meta = workingMessages[lastIdx].meta || {};
           if (rpiece) {
             workingMessages[lastIdx].meta.reasoningContent = reasoningFull;
@@ -243,9 +232,7 @@
         if ($chatHistoryStore.currentSessionId === sessionId) {
           if (piece) chatStore.patchLastAssistantContent(full);
           if (rpiece)
-            chatStore.patchLastAssistantMeta({
-              reasoningContent: reasoningFull,
-            });
+            chatStore.patchLastAssistantMeta({ reasoningContent: reasoningFull });
         }
         chatHistoryStore.updateSession(sessionId, workingMessages);
       }
@@ -266,21 +253,15 @@
         full.trim()
       ) {
         try {
-          try {
-            const items = await APIService.generateSuggestions(full);
-            if (Array.isArray(items) && items.length > 0) {
-              setSuggestions(items);
-            } else {
-              console.log('items', items);
-              
-              setSuggestions(["能详细解释一下吗？", "有什么相关例子？", "还有其他建议吗？"]);
-            }
-          } catch (e) {
-            console.error("生成建议失败(兜底):", e);
+          const items = await APIService.generateSuggestions(full);
+          if (Array.isArray(items) && items.length > 0) {
+            setSuggestions(items);
+          } else {
             setSuggestions(["能详细解释一下吗？", "有什么相关例子？", "还有其他建议吗？"]);
           }
         } catch (e) {
           console.error("生成建议失败:", e);
+          setSuggestions(["能详细解释一下吗？", "有什么相关例子？", "还有其他建议吗？"]);
         }
       }
     } catch (error: any) {
@@ -299,8 +280,8 @@
             status: "error",
           });
           chatHistoryStore.updateSession(sessionId, workingMessages);
+          // 不手动 setGenerating(false)，由响应式同步块负责
           if ($chatHistoryStore.currentSessionId === sessionId) {
-            chatStore.setGenerating(false);
             chatStore.addMessage("assistant", errText);
           }
         } else {
@@ -328,24 +309,23 @@
         }
       }
     } finally {
-      // 清理 inflight
-      const inflight = inflightMap.get(sessionId);
-      if (inflight && inflight.gen === myGen) {
-        inflightMap.delete(sessionId);
-      }
-      // 重置 UI 的 generating
-      if ($chatHistoryStore.currentSessionId === sessionId) {
-        chatStore.setGenerating(false);
-      }
+      // 清理 inflight：用 store 触发响应
+      inflightMapStore.update((m) => {
+        const copy = new Map(m);
+        const inflight = copy.get(sessionId);
+        if (inflight && inflight.gen === myGen) copy.delete(sessionId);
+        return copy;
+      });
+      // ❌ 不再直接 setGenerating(false)，由响应式同步块接管
     }
   }
 
   function handleNewChat() {
-    // ✅ 不 abort 其它会话的流；仅创建并切换到新会话
     const newId = chatHistoryStore.createSession();
     chatStore.reset();
     clearSuggestions();
     isAtBottom = true;
+    // 生成态由响应式块自动根据 inflightMapStore 判定
   }
 
   function handleClearChat() {
@@ -359,40 +339,45 @@
     const sessionId = event.detail;
     saveSession();
     chatHistoryStore.selectSession(sessionId);
+
     const session = $chatHistoryStore.sessions.find((s) => s.id === sessionId);
     if (session) {
       chatStore.loadSession(session.messages);
       clearSuggestions();
+
+      // 仅当该会话没有在跑流时生成建议
       if (session.messages.length > 0) {
         const last = session.messages[session.messages.length - 1];
-        if (last.role === "assistant") {
-          if (!inflightMap.has(sessionId)) {
-            (async () => {
-              try {
-                const items = await APIService.generateSuggestions(
-                  last.content ?? "",
-                );
-                setSuggestions(items);
-              } catch (e) {
-                console.error("生成建议失败:", e);
-              }
-            })();
-          }
+        if (last.role === "assistant" && !$inflightMapStore.has(sessionId)) {
+          (async () => {
+            try {
+              const items = await APIService.generateSuggestions(last.content ?? "");
+              setSuggestions(items);
+            } catch (e) {
+              console.error("生成建议失败:", e);
+            }
+          })();
         }
       }
     }
+    // 生成态由响应式块自动刷新，无需手动 setGenerating
   }
 
   function handleDeleteSession(event: CustomEvent<string>) {
     const sessionId = event.detail;
+
     // 若该会话有在跑的流，先中止
-    const inflight = inflightMap.get(sessionId);
+    const maybeMap = $inflightMapStore;
+    const inflight = maybeMap.get(sessionId);
     if (inflight) {
-      try {
-        inflight.controller.abort();
-      } catch {}
-      inflightMap.delete(sessionId);
+      try { inflight.controller.abort(); } catch {}
+      inflightMapStore.update((m) => {
+        const copy = new Map(m);
+        copy.delete(sessionId);
+        return copy;
+      });
     }
+
     const deletingCurrent = $chatHistoryStore.currentSessionId === sessionId;
     chatHistoryStore.deleteSession(sessionId);
     if (deletingCurrent) handleNewChat();
@@ -431,9 +416,7 @@
         <div
           class="hidden h-8 w-8 flex-shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white/20 backdrop-blur-sm md:flex"
         >
-          <div
-            class="h-4 w-4 rounded bg-gradient-to-br from-white to-blue-200"
-          />
+          <div class="h-4 w-4 rounded bg-gradient-to-br from-white to-blue-200" />
         </div>
         <h1 class="truncate pl-3 text-lg font-bold tracking-tight md:text-xl">
           Deepseek 智能助手
@@ -447,7 +430,7 @@
 
   <!-- Main Area: sidebar + chat -->
   <div class="relative flex min-h-0 flex-1 overflow-hidden">
-    <!-- Sidebar：移动端抽屉 + 桌面端固定宽度 -->
+    <!-- Sidebar -->
     <aside
       id="app-sidebar"
       class={`flex h-full flex-col border-r border-gray-200 bg-white
@@ -458,10 +441,7 @@
     `}
     >
       {#if !sidebarOpen}
-        <!-- 折叠态的小图标栏：仅桌面端可见 -->
-        <div
-          class="hidden h-full flex-col items-center justify-between py-3 md:flex"
-        >
+        <div class="hidden h-full flex-col items-center justify-between py-3 md:flex">
           <button
             class="rounded-lg p-2 text-gray-600 hover:bg-gray-100"
             on:click={toggleSidebar}
@@ -471,7 +451,6 @@
           </button>
         </div>
       {:else}
-        <!-- 展开态：移动端抽屉内容 & 桌面端完整侧边栏 -->
         <Sidebar
           isOpen={sidebarOpen}
           on:newChat={handleNewChat}
@@ -484,7 +463,6 @@
     </aside>
 
     {#if sidebarOpen}
-      <!-- 移动端遮罩：点击即可关闭（桌面端隐藏） -->
       <div
         class="fixed inset-0 z-30 bg-black/40 md:hidden"
         on:click={() => (sidebarOpen = false)}
@@ -545,9 +523,7 @@
             <button
               type="button"
               on:click={handleClearChat}
-              disabled={!hasMessages ||
-                isCurrentSessionSending ||
-                $chatStore.generating}
+              disabled={!hasMessages || isCurrentSessionSending || $chatStore.generating}
               class="flex items-center space-x-2 rounded-xl border border-red-200 bg-white px-3 py-2 text-sm font-medium text-red-600 shadow-sm transition hover:border-red-300 hover:bg-red-50 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <Trash2 size={14} />

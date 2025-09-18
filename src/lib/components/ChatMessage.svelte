@@ -18,11 +18,13 @@
   $: hasText =
     (message?.content ?? '').trim().length > 0;
 
-  // 是否展示 reasoning 折叠框（仅助手消息）
-  $: hasReasoning =
-    isAssistant &&
-    typeof message?.meta?.reasoningContent === 'string' &&
-    message.meta.reasoningContent.length > 0;
+// 是否展示 reasoning 折叠框（仅助手消息，且内容不是“暂无推理过程”）
+$: hasReasoning =
+  isAssistant &&
+  typeof message?.meta?.reasoningContent === 'string' &&
+  message.meta.reasoningContent.trim().length > 0 &&
+  message.meta.reasoningContent.trim() !== '暂无推理过程';
+
 
   // --- 默认展开逻辑 ---
   let reasoningOpen = false;
@@ -78,7 +80,7 @@
         class="
           relative p-4 shadow-lg
           {isAssistant
-            ? 'bg-white text-gray-900 border border-gray-200 rounded-[20px] rounded-br-[4px] after:content-[\'\'] after:absolute after:bottom-0 after:-left-2 after:w-0 after:h-0 after:border-[8px] after:border-transparent after:[border-top-color:theme(colors.white)] after:[border-right-color:theme(colors.white)]'
+            ? 'bg-white text-gray-900 border border-gray-200 rounded-[20px] rounded-bl-[4px]'
             : 'text-white rounded-[20px] rounded-br-[4px] bg-gradient-to-br from-blue-500 to-blue-600'}
         "
       >
