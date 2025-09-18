@@ -23,52 +23,52 @@ export class APIService {
     return state.configs.find((c) => c.id === state.selectedConfigId) || null;
   }
 
-private static async makeRequest(messages: Message[], signal?: AbortSignal) {
-  const config = this.getActiveConfig();
-  if (!config) {
-    throw new Error("没有选择API配置");
+  private static async makeRequest(messages: Message[], signal?: AbortSignal) {
+    const config = this.getActiveConfig();
+    if (!config) {
+      throw new Error("没有选择API配置");
+    }
+
+    const state = get(apiConfigStore);
+    if (!state.selectedModel) {
+      throw new Error("没有选择模型");
+    }
+
+    const requestData = {
+      model: state.selectedModel,
+      messages: messages.map((msg) => ({
+        role: msg.role === "user" ? "user" : "assistant",
+        content: msg.content,
+      })),
+      stream: true,
+      max_tokens: 2000,
+      temperature: 0.7,
+    };
+
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (config.apiKey) headers.Authorization = `Bearer ${config.apiKey}`;
+
+    // 根据 baseURL 判断请求路径
+    let endpoint = "/v1/chat/completions";
+    if (config.baseURL === "http://220.203.247.201:8031") {
+      endpoint = "/v1/chat/completions_PD";
+    } else if (config.baseURL === "http://220.203.247.201:8043") {
+      endpoint = "/v1/chat/completions";
+    }
+
+    const response = await fetch(`${endpoint}`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(requestData),
+      signal,
+    });
+
+    if (!response.ok) {
+      throw new Error(`API请求失败: ${response.status}`);
+    }
+
+    return response;
   }
-
-  const state = get(apiConfigStore);
-  if (!state.selectedModel) {
-    throw new Error("没有选择模型");
-  }
-
-  const requestData = {
-    model: state.selectedModel,
-    messages: messages.map((msg) => ({
-      role: msg.role === "user" ? "user" : "assistant",
-      content: msg.content,
-    })),
-    stream: true,
-    max_tokens: 2000,
-    temperature: 0.7,
-  };
-
-  const headers: Record<string, string> = { "Content-Type": "application/json" };
-  if (config.apiKey) headers.Authorization = `Bearer ${config.apiKey}`;
-
-  // 根据 baseURL 判断请求路径
-  let endpoint = "/v1/chat/completions";
-  if (config.baseURL === "http://220.203.247.201:8031") {
-    endpoint = "/v1/chat/completions_PD";
-  } else if (config.baseURL === "http://220.203.247.201:8043") {
-    endpoint = "/v1/chat/completions";
-  }
-
-  const response = await fetch(`${endpoint}`, {
-    method: "POST",
-    headers,
-    body: JSON.stringify(requestData),
-    signal,
-  });
-
-  if (!response.ok) {
-    throw new Error(`API请求失败: ${response.status}`);
-  }
-
-  return response;
-}
 
 
   // ✅ 现在返回 JSON 事件（包含 content 和 reasoning_content）
@@ -184,14 +184,22 @@ private static async makeRequest(messages: Message[], signal?: AbortSignal) {
           },
           { role: "user", content: `上一轮对话内容：${lastResponse}` },
         ],
-        max_tokens: 200,
+        max_tokens: 2000,
         temperature: 0.7,
       };
+
+      // 根据 baseURL 判断请求路径
+      let endpoint = "/v1/chat/completions";
+      if (config.baseURL === "http://220.203.247.201:8031") {
+        endpoint = "/v1/chat/completions_PD";
+      } else if (config.baseURL === "http://220.203.247.201:8043") {
+        endpoint = "/v1/chat/completions";
+      }
 
       const headers: Record<string, string> = { "Content-Type": "application/json" };
       if (config.apiKey) headers.Authorization = `Bearer ${config.apiKey}`;
 
-      const response = await fetch(`${config.baseURL}/v1/chat/completions`, {
+      const response = await fetch(`${endpoint}`, {
         method: "POST",
         headers,
         body: JSON.stringify(requestData),
@@ -210,7 +218,7 @@ private static async makeRequest(messages: Message[], signal?: AbortSignal) {
       } catch {
         const match = content.match(/\[.*\]/s);
         if (match) {
-          try { suggestions = JSON.parse(match[0]); } catch {}
+          try { suggestions = JSON.parse(match[0]); } catch { }
         }
         if (suggestions.length === 0) {
           suggestions = content
