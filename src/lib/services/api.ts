@@ -175,7 +175,8 @@ export class APIService {
       }
 
       const requestData = {
-        model: state.selectedModel,
+        // model: state.selectedModel,
+        model: "/models/DeepSeek-V3.1-G2",
         messages: [
           {
             role: "system",
