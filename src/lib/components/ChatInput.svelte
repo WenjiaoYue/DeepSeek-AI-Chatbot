@@ -278,7 +278,7 @@
             {disabled}
             rows="1"
             class="block w-full bg-transparent px-4 py-3 outline-none resize-none
-                   focus:outline-none focus:ring-0 focus:shadow-none
+                   focus:outline-none focus:ring-0 focus:shadow-none text-[#000]
                    border-none leading-[1.25] min-h-0 pr-12
                    [scrollbar-width:thin] [scrollbar-color:rgba(0,0,0,0.35)_transparent]
                    dark:[scrollbar-color:rgba(255,255,255,0.35)_transparent]"
